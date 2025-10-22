@@ -11,7 +11,7 @@ type TaskListProps = {
   onArchiveTask: (id: string) => void;
 };
 
-function TaskList({}: TaskListProps) {
+function TaskList() {
   const tasks = useAppSelector((state) => {
     const tasksInOrder = [
       ...state.taskbox.tasks.filter((t) => t.state === "TASK_PINNED"),

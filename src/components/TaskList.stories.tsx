@@ -1,62 +1,115 @@
-import TaskList from "./TaskList";
-import * as TaskStories from "./Task.stories";
+import { configureStore, createSlice } from "@reduxjs/toolkit";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Provider } from "react-redux";
-import store from "../store/store";
+import type { TaskData } from "../types";
+import * as TaskStories from "./Task.stories";
+import TaskList from "./TaskList";
+
+export const MockedState = {
+  tasks: [
+    { ...TaskStories.Default.args.task, id: "1", title: "Task 1" },
+    { ...TaskStories.Default.args.task, id: "2", title: "Task 2" },
+    { ...TaskStories.Default.args.task, id: "3", title: "Task 3" },
+    { ...TaskStories.Default.args.task, id: "4", title: "Task 4" },
+    { ...TaskStories.Default.args.task, id: "5", title: "Task 5" },
+    { ...TaskStories.Default.args.task, id: "6", title: "Task 6" },
+  ] as TaskData[],
+  status: "idle",
+  error: null,
+};
+
+const MockStore = ({
+  taskboxState,
+  children,
+}: {
+  taskboxState: typeof MockedState;
+  children: React.ReactNode;
+}) => (
+  <Provider
+    store={configureStore({
+      reducer: {
+        taskbox: createSlice({
+          name: "taskbox",
+          initialState: taskboxState,
+          reducers: {
+            updateTaskState: (state, action) => {
+              const { id, newTaskState } = action.payload;
+
+              const task = state.tasks.findIndex((task) => task.id === id);
+
+              if (task >= 0) {
+                state.tasks[task].state = newTaskState;
+              }
+            },
+          },
+        }).reducer,
+      },
+    })}
+  >
+    {children}
+  </Provider>
+);
 const meta = {
   component: TaskList,
   title: "TaskList",
+  decorators: [(story) => <div style={{ margin: "3rem" }}>{story()}</div>],
   tags: ["autodocs"],
-
-  decorators: [
-    (story) => (
-      <Provider store={store}>
-        <div style={{ padding: "3rem" }}>Decorator 추가할수 있음 {story()}</div>
-      </Provider>
-    ),
-  ],
-  args: {
-    ...TaskStories.ActionsData,
-  },
+  excludeStories: /.*MockedState$/,
 } satisfies Meta<typeof TaskList>;
+
 export default meta;
 
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  args: {
-    tasks: [
-      { ...TaskStories.Default.args.task, id: "1", title: "Task 1" },
-      { ...TaskStories.Default.args.task, id: "2", title: "Task 2" },
-      { ...TaskStories.Default.args.task, id: "3", title: "Task 3" },
-      { ...TaskStories.Default.args.task, id: "4", title: "Task 4" },
-      { ...TaskStories.Default.args.task, id: "5", title: "Task 5" },
-      { ...TaskStories.Default.args.task, id: "6", title: "Task 6" },
-    ],
-  },
+  decorators: [
+    (story) => <MockStore taskboxState={MockedState}>{story()}</MockStore>,
+  ],
 };
 
-export const WithPinnedTask: Story = {
-  args: {
-    tasks: [
-      ...Default.args.tasks.slice(0, 5),
-      { id: "6", title: "Task 6 (pinned)", state: "TASK_PINNED" },
-    ],
-  },
+export const WithPinnedTasks: Story = {
+  decorators: [
+    (story) => {
+      const pinnedtasks: TaskData[] = [
+        ...MockedState.tasks.slice(0, 5),
+        { id: "6", title: "Task 6 (pinned)", state: "TASK_PINNED" },
+      ];
+
+      return (
+        <MockStore
+          taskboxState={{
+            ...MockedState,
+            tasks: pinnedtasks,
+          }}
+        >
+          {story()}
+        </MockStore>
+      );
+    },
+  ],
 };
 
 export const Loading: Story = {
-  args: {
-    tasks: [],
-    loading: true,
-  },
+  decorators: [
+    (story) => (
+      <MockStore
+        taskboxState={{
+          ...MockedState,
+          status: "loading",
+        }}
+      >
+        {story()}
+      </MockStore>
+    ),
+  ],
 };
 
 export const Empty: Story = {
-  args: {
-    // Shaping the stories through args composition.
-    // Inherited data coming from the Loading story.
-    ...Loading.args,
-    loading: false,
-  },
+  decorators: [
+    (story) => (
+      <MockStore taskboxState={{ ...MockedState, tasks: [] }}>
+        {story()}
+      </MockStore>
+    ),
+  ],
 };

@@ -1,4 +1,8 @@
-import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import {
+  createAsyncThunk,
+  createSlice,
+  type PayloadAction,
+} from "@reduxjs/toolkit";
 import type { TaskData } from "../types";
 
 interface TaskBoxState {
@@ -15,10 +19,27 @@ const defaultTasks: TaskData[] = [
 ];
 
 const TaskBoxData: TaskBoxState = {
-  tasks: defaultTasks,
+  // tasks: defaultTasks,
+  tasks: [],
   status: "idle",
   error: null,
 };
+
+export const fetchTasks = createAsyncThunk("taskbox/fetchTasks", async () => {
+  const response = await fetch(
+    "https://jsonplaceholder.typicode.com/todos?userId=1"
+  );
+
+  const data = await response.json();
+  const result = data.map(
+    (task: { id: number; title: string; completed: boolean }) => ({
+      id: `${task.id} `,
+      title: task.title,
+      state: task.completed ? "TASK_ARCHIVED" : "TASK_INBOX",
+    })
+  );
+  return result;
+});
 export const TasksSlice = createSlice({
   name: "taskbox",
   initialState: TaskBoxData,
@@ -32,6 +53,24 @@ export const TasksSlice = createSlice({
         task.state = action.payload.newTaskState;
       }
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchTasks.pending, (state) => {
+        state.status = "loading";
+        state.error = null;
+        state.tasks = [];
+      })
+      .addCase(fetchTasks.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.tasks = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchTasks.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.error.message || "Failed to fetch tasks";
+        state.tasks = [];
+      });
   },
 });
 
