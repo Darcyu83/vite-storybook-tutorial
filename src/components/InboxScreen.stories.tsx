@@ -1,9 +1,10 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryContext, StoryObj } from "@storybook/react-vite";
 import InboxScreen from "./InboxScreen";
 import { Provider } from "react-redux";
 import store from "../store/store";
 import { http, HttpResponse } from "msw";
 import { MockedState } from "./TaskList.stories";
+import { waitFor, waitForElementToBeRemoved } from "storybook/internal/test";
 
 const meta = {
   component: InboxScreen,
@@ -24,6 +25,13 @@ export const Default: Story = {
           return HttpResponse.json(MockedState.tasks);
         }),
       ],
+    },
+    play: async ({ canvas, userEvent }: StoryContext<typeof InboxScreen>) => {
+      await waitForElementToBeRemoved(await canvas.findByTestId("loading"));
+      await waitFor(async () => {
+        await userEvent.click(canvas.getByLabelText("pinTask-1"));
+        await userEvent.click(canvas.getByLabelText("pinTask-3"));
+      });
     },
   },
 };
